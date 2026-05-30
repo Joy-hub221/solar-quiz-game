@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System Live Quiz Show</title>
+    <style>
+        :root {
+            --space-bg: #0b0f19;
+            --card-bg: #1e293b;
+            --accent-blue: #38bdf8;
+            --accent-purple: #a855f7;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #eab308;
+            --text: #f8fafc;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: radial-gradient(circle at center, #1e1b4b 0%, var(--space-bg) 100%); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow-x: hidden; }
+        
+        .container { width: 90%; max-width: 1000px; background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: center; position: relative; }
+        h1 { font-size: 2.5rem; margin-bottom: 20px; background: linear-gradient(to right, var(--accent-blue), var(--accent-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 2px; }
+        .hidden { display: none !important; }
+        
+        /* Utility Buttons */
+        button { background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)); color: white; border: none; padding: 12px 30px; font-size: 1.1rem; font-weight: bold; border-radius: 50px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4); }
+        button:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(168, 85, 247, 0.6); }
+
+        /* Role Selection */
+        .role-select { display: flex; gap: 20px; justify-content: center; margin-bottom: 30px; flex-wrap: wrap; }
+        .role-btn { padding: 20px 40px; font-size: 1.3rem; width: 200px; height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+
+        /* Lobby Screen */
+        .lobby-input-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 30px; flex-wrap: wrap; }
+        input[type="text"] { background: #0f172a; border: 2px solid rgba(255,255,255,0.2); padding: 12px 20px; border-radius: 50px; color: white; font-size: 1rem; width: 250px; outline: none; }
+        input[type="text"]:focus { border-color: var(--accent-blue); }
+        .roster { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin: 30px 0; min-height: 100px; }
+        .student-tag { background: rgba(255,255,255,0.1); padding: 8px 20px; border-radius: 20px; font-weight: 600; border: 1px solid rgba(255,255,255,0.2); animation: popIn 0.3s ease; }
+
+        /* Game Code Display */
+        .game-code-box { background: rgba(168, 85, 247, 0.2); border: 2px solid var(--accent-purple); border-radius: 15px; padding: 20px; margin: 20px 0; }
+        .game-code-box h3 { color: var(--accent-purple); margin-bottom: 10px; }
+        .game-code { font-size: 2rem; font-weight: bold; font-family: monospace; color: var(--accent-blue); letter-spacing: 5px; }
+        .copy-btn { padding: 8px 15px; font-size: 0.9rem; margin-top: 10px; }
+
+        /* Student Join Screen */
+        .join-screen { text-align: center; }
+        .join-input-group { display: flex; flex-direction: column; gap: 15px; align-items: center; margin: 30px 0; }
+        input[type="number"] { width: 300px; }
+
+        /* Game Screen Layout */
+        .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .timer-circle { width: 70px; height: 70px; border-radius: 50%; border: 4px solid var(--accent-blue); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
+        .bonus-badge { background: var(--warning); color: #000; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; margin-top: 10px; display: inline-block; }
+        .question-text { font-size: 1.8rem; font-weight: 600; margin-bottom: 40px; line-height: 1.4; }
+        
+        .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
+        .option-card { padding: 25px; border-radius: 15px; font-size: 1.2rem; font-weight: 600; text-align: left; cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent; display: flex; align-items: center; }
+        .option-card::before { content: attr(data-letter) ". "; margin-right: 15px; font-size: 1.5rem; opacity: 0.7; }
+        .opt-0 { background-color: #ef4444; } /* Red */
+        .opt-1 { background-color: #3b82f6; } /* Blue */
+        .opt-2 { background-color: #eab308; color: black; } /* Yellow */
+        .opt-3 { background-color: #10b981; } /* Green */
+        .option-card:hover { transform: scale(1.02); filter: brightness(1.1); }
+        .option-card.correct { border: 4px solid #fff; box-shadow: 0 0 20px #fff; }
+        .option-card.dimmed { opacity: 0.3; transform: scale(0.98); }
+        .option-card.selected { border: 4px solid #fff; box-shadow: 0 0 15px rgba(255,255,255,0.8); }
+
+        /* Student Status */
+        .student-status { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; margin-top: 20px; }
+        .student-status p { font-size: 1.1rem; margin: 10px 0; }
+        .status-indicator { display: inline-block; width: 15px; height: 15px; border-radius: 50%; margin-right: 10px; }
+        .status-waiting { background-color: var(--warning); }
+        .status-answered { background-color: var(--success); }
+
+        /* Active Answering Matrix */
+        .answering-status-box { margin-top: 30px; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; }
+        .status-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 15px; }
+        .status-pill { padding: 8px 15px; border-radius: 10px; background: #475569; font-size: 0.9rem; cursor: pointer; }
+        .status-pill.ready { background: var(--success); }
+        
+        /* Leaderboard Screen */
+        .leaderboard-list { margin: 30px auto; max-width: 600px; display: flex; flex-direction: column; gap: 15px; }
+        .leaderboard-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 15px 25px; border-radius: 12px; border-left: 5px solid var(--accent-blue); }
+        .leaderboard-item:nth-child(1) { border-left-color: var(--warning); background: rgba(234, 179, 8, 0.1); }
+        .rank { font-weight: bold; font-size: 1.2rem; margin-right: 15px; }
+        .score { font-family: monospace; font-size: 1.3rem; color: var(--accent-blue); }
+
+        /* Modal */
+        .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: var(--card-bg); padding: 40px; border-radius: 20px; text-align: center; max-width: 500px; }
+        .modal-btns { display: flex; gap: 15px; margin-top: 25px; justify-content: center; flex-wrap: wrap; }
+        .modal-btn { width: 60px; height: 60px; border-radius: 50%; font-size: 1.5rem; font-weight: bold; border: none; cursor: pointer; color: white; }
+
+        .loading { text-align: center; }
+        .spinner { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent-blue); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes popIn { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        .error-msg { color: var(--danger); background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 10px; margin: 15px 0; }
+        .success-msg { color: var(--success); background: rgba(34, 197, 94, 0.1); padding: 15px; border-radius: 10px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Role Selection Screen -->
+    <div id="role-screen">
+        <h1>Solar System Live Quiz</h1>
+        <p style="margin-bottom: 30px; color: #94a3b8;">Choose Your Role</p>
+        <div class="role-select">
+            <button class="role-btn" onclick="selectRole('teacher')">👨‍🏫 Teacher<br><span style="font-size: 0.8rem;">Host & Control</span></button>
+            <button class="role-btn" onclick="selectRole('student')">👨‍🎓 Student<br><span style="font-size: 0.8rem;">Answer Questions</span></button>
+        </div>
+    </div>
+
+    <!-- Teacher Lobby Screen -->
+    <div id="lobby-screen" class="hidden">
+        <h1>Solar System Live Show</h1>
+        <p style="margin-bottom: 20px; color: #94a3b8;">Teacher Dashboard: Register your students below to start!</p>
+        
+        <div class="game-code-box" id="game-code-box" style="display: none;">
+            <h3>🚀 Game Code (Share with Students)</h3>
+            <div class="game-code" id="game-code-display">------</div>
+            <button class="copy-btn" onclick="copyGameCode()">📋 Copy Code</button>
+        </div>
+
+        <div class="lobby-input-group">
+            <input type="text" id="student-name-input" placeholder="Enter student name...">
+            <button onclick="addStudent()">Add Student</button>
+            <button onclick="addDemoStudents()" style="background: transparent; border: 2px solid var(--accent-purple); box-shadow: none;">+ Add Demo Bots</button>
+        </div>
+
+        <h3>Joined Classroom (<span id="count">0</span>)</h3>
+        <div class="roster" id="roster-container"></div>
+        
+        <button id="start-btn" onclick="startGame()" style="font-size: 1.4rem; padding: 15px 45px; margin-top: 20px;" disabled>🚀 Launch Live Game</button>
+        <button onclick="backToRole()" style="background: none; border: 1px solid #64748b; box-shadow: none; margin-top: 20px;">← Back</button>
+    </div>
+
+    <!-- Student Join Screen -->
+    <div id="join-screen" class="hidden join-screen">
+        <h1>Join Quiz Game</h1>
+        <p style="margin-bottom: 20px; color: #94a3b8;">Enter the game code your teacher provided</p>
+        
+        <div class="join-input-group">
+            <input type="number" id="game-code-input" placeholder="Enter 6-digit code" min="100000" max="999999">
+            <input type="text" id="student-join-name" placeholder="Enter your name">
+            <button onclick="joinGame()">Join Game</button>
+        </div>
+        <div id="join-error" class="error-msg hidden"></div>
+        <button onclick="backToRole()" style="background: none; border: 1px solid #64748b; box-shadow: none;">← Back</button>
+    </div>
+
+    <!-- Teacher Game Screen -->
+    <div id="game-screen" class="hidden">
+        <div class="game-header">
+            <div>
+                <span id="question-number" style="color: var(--accent-blue); font-weight: bold; font-size: 1.2rem;">QUESTION 1/12</span>
+                <div id="bonus-tag" class="bonus-badge hidden">🚀 DOUBLE POINTS BONUS</div>
+            </div>
+            <div class="timer-circle" id="timer">20</div>
+        </div>
+
+        <div class="question-text" id="question-text">Loading question...</div>
+
+        <div class="options-grid" id="options-grid">
+            <div class="option-card opt-0" data-letter="A" onclick="teacherHighlightOption(0)">Option A</div>
+            <div class="option-card opt-1" data-letter="B" onclick="teacherHighlightOption(1)">Option B</div>
+            <div class="option-card opt-2" data-letter="C" onclick="teacherHighlightOption(2)">Option C</div>
+            <div class="option-card opt-3" data-letter="D" onclick="teacherHighlightOption(3)">Option D</div>
+        </div>
+
+        <div class="answering-status-box">
+            <p style="font-weight: bold; font-size: 0.9rem; color: #94a3b8;">CLASSROOM LIVE RESPONSE</p>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px;">Students answered: <span id="answered-count">0</span>/<span id="total-count">0</span></p>
+            <div class="status-grid" id="status-grid"></div>
+        </div>
+
+        <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+            <button id="reveal-btn" onclick="revealAnswer()" style="background: var(--warning); color: black;">Reveal Answer</button>
+            <button id="next-btn" onclick="goToLeaderboard()" class="hidden">View Standings ➔</button>
+        </div>
+    </div>
+
+    <!-- Student Game Screen -->
+    <div id="student-game-screen" class="hidden">
+        <div class="game-header">
+            <div>
+                <span id="student-question-number" style="color: var(--accent-blue); font-weight: bold; font-size: 1.2rem;">QUESTION 1/12</span>
+                <div id="student-bonus-tag" class="bonus-badge hidden">🚀 DOUBLE POINTS</div>
+            </div>
+            <div class="timer-circle" id="student-timer">20</div>
+        </div>
+
+        <div class="question-text" id="student-question-text">Waiting for question...</div>
+
+        <div class="options-grid" id="student-options-grid">
+            <div class="option-card opt-0" data-letter="A" onclick="studentSelectOption(0)">Option A</div>
+            <div class="option-card opt-1" data-letter="B" onclick="studentSelectOption(1)">Option B</div>
+            <div class="option-card opt-2" data-letter="C" onclick="studentSelectOption(2)">Option C</div>
+            <div class="option-card opt-3" data-letter="D" onclick="studentSelectOption(3)">Option D</div>
+        </div>
+
+        <div class="student-status">
+            <p id="student-status-text">Waiting for question...</p>
+            <div id="student-score-display" style="font-size: 1.3rem; color: var(--accent-blue); margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Screen -->
+    <div id="leaderboard-screen" class="hidden">
+        <h1 id="leaderboard-title">Class Leaderboard</h1>
+        <div class="leaderboard-list" id="leaderboard-list"></div>
+        <button id="next-q-btn" onclick="nextQuestion()" style="font-size: 1.3rem; padding: 12px 40px;">Next Orbit ➔</button>
+    </div>
+
+    <!-- Student Leaderboard Screen -->
+    <div id="student-leaderboard-screen" class="hidden">
+        <h1 id="student-leaderboard-title">Leaderboard</h1>
+        <div class="leaderboard-list" id="student-leaderboard-list"></div>
+        <p id="your-rank" style="margin-top: 20px; font-size: 1.1rem; color: var(--accent-blue);"></p>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+    // 12 Quiz Questions
+    const quizData = [
+        { q: "Which planet is the closest to the Sun?", o: ["Earth", "Mars", "Mercury", "Neptune"], a: 2, bonus: false },
+        { q: "Which planet is called the \"Bright & Boiling Neighbor\"?", o: ["Venus", "Saturn", "Uranus", "Mars"], a: 0, bonus: false },
+        { q: "Why is Earth special?", o: ["It has rings.", "It is the hottest planet.", "It is the only planet known to have life.", "It is the largest planet."], a: 2, bonus: false },
+        { q: "What color is Mars often called?", o: ["Blue", "Green", "Yellow", "Red"], a: 3, bonus: false },
+        { q: "What is found between Mars and Jupiter?", o: ["A giant ring", "The Asteroid Belt", "A black hole", "Another sun"], a: 1, bonus: false },
+        { q: "Which planet is the largest in our solar system?", o: ["Earth", "Saturn", "Jupiter", "Neptune"], a: 2, bonus: false },
+        { q: "What makes Saturn easy to recognize?", o: ["Its blue color", "Its volcanoes", "Its huge rings", "Its ice"], a: 2, bonus: false },
+        { q: "Which planet spins on its side?", o: ["Venus", "Uranus", "Earth", "Mercury"], a: 1, bonus: false },
+        { q: "Which planet is known as the \"Windy Blue Marble Planet\"?", o: ["Neptune", "Mars", "Jupiter", "Saturn"], a: 0, bonus: false },
+        { q: "What does one Earth year mean?", o: ["One rotation around its axis", "One trip around the Sun", "One month on Earth", "One day on Earth"], a: 1, bonus: false },
+        { q: "Which movement causes day and night?", o: ["Orbit", "Revolution", "Rotation", "Gravity"], a: 2, bonus: true },
+        { q: "Which movement helps create the seasons on Earth?", o: ["Rotation only", "Revolution and Earth's tilted axis", "Gravity only", "Moonlight"], a: 1, bonus: true }
+    ];
+
+    let currentRole = null;
+    let students = [];
+    let currentQ = 0;
+    let timerInterval;
+    let timeLeft = 20;
+    let studentAnswers = {};
+    let gameCode = null;
+    let currentStudentId = null;
+    let currentStudentName = null;
+    let state = "lobby";
+    let db;
+
+    // Initialize Firebase
+    try {
+        db = getDatabase();
+    } catch (error) {
+        console.error("Firebase initialization error:", error);
+    }
+
+    const studentInput = document.getElementById('student-name-input');
+
+    studentInput.addEventListener("keyup", function(event) {
+        if (event.key === "Enter") { addStudent(); }
+    });
+
+    document.getElementById('game-code-input').addEventListener("keyup", function(event) {
+        if (event.key === "Enter") { joinGame(); }
+    });
+
+    // ==================== ROLE SELECTION ====================
+    function selectRole(role) {
+        currentRole = role;
+        document.getElementById('role-screen').classList.add('hidden');
+        
+        if (role === 'teacher') {
+            generateGameCode();
+            document.getElementById('lobby-screen').classList.remove('hidden');
+        } else {
+            document.getElementById('join-screen').classList.remove('hidden');
+        }
+    }
+
+    function backToRole() {
+        currentRole = null;
+        document.getElementById('role-screen').classList.remove('hidden');
+        document.getElementById('lobby-screen').classList.add('hidden');
+        document.getElementById('join-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('student-game-screen').classList.add('hidden');
+        document.getElementById('leaderboard-screen').classList.add('hidden');
+        document.getElementById('student-leaderboard-screen').classList.add('hidden');
+    }
+
+    // ==================== TEACHER FUNCTIONS ====================
+    function generateGameCode() {
+        gameCode = Math.floor(100000 + Math.random() * 900000);
+        document.getElementById('game-code-display').innerText = gameCode;
+        document.getElementById('game-code-box').style.display = 'block';
+    }
+
+    function copyGameCode() {
+        navigator.clipboard.writeText(gameCode);
+        alert('Game code copied to clipboard: ' + gameCode);
+    }
+
+    function addStudent() {
+        let name = studentInput.value.trim();
+        if (name === "") return;
+        students.push({ name: name, score: 0 });
+        studentInput.value = "";
+        updateRoster();
+    }
+
+    function addDemoStudents() {
+        const bots = ["Alex (Bot)", "Sasha (Bot)", "Jamie (Bot)", "Jordan (Bot)"];
+        bots.forEach(b => {
+            if(!students.some(s => s.name === b)) students.push({ name: b, score: 0 });
+        });
+        updateRoster();
+    }
+
+    function updateRoster() {
+        const rosterContainer = document.getElementById('roster-container');
+        rosterContainer.innerHTML = "";
+        students.forEach(s => {
+            let tag = document.createElement('div');
+            tag.className = "student-tag";
+            tag.innerText = s.name;
+            rosterContainer.appendChild(tag);
+        });
+        document.getElementById('count').innerText = students.length;
+        document.getElementById('start-btn').disabled = students.length === 0;
+    }
+
+    function startGame() {
+        document.getElementById('lobby-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        state = "question";
+        timeLeft = 20;
+        studentAnswers = {};
+        document.getElementById('timer').innerText = timeLeft;
+        document.getElementById('reveal-btn').classList.remove('hidden');
+        document.getElementById('next-btn').classList.add('hidden');
+        
+        let qData = quizData[currentQ];
+        document.getElementById('question-number').innerText = `QUESTION ${currentQ + 1}/${quizData.length}`;
+        document.getElementById('question-text').innerText = qData.q;
+        
+        if (qData.bonus) {
+            document.getElementById('bonus-tag').classList.remove('hidden');
+        } else {
+            document.getElementById('bonus-tag').classList.add('hidden');
+        }
+
+        const cards = document.querySelectorAll('#options-grid .option-card');
+        cards.forEach((card, index) => {
+            card.innerText = qData.o[index];
+            card.className = `option-card opt-${index}`;
+            card.classList.remove('correct', 'dimmed');
+        });
+
+        renderStatusGrid();
+
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer').innerText = timeLeft;
+            
+            students.forEach((s, idx) => {
+                if (s.name.includes("(Bot)") && !studentAnswers.hasOwnProperty(idx) && Math.random() > 0.6) {
+                    let correctAns = quizData[currentQ].a;
+                    studentAnswers[idx] = Math.random() < 0.6 ? correctAns : Math.floor(Math.random() * 4);
+                    renderStatusGrid();
+                }
+            });
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                revealAnswer();
+            }
+        }, 1000);
+    }
+
+    function renderStatusGrid() {
+        const grid = document.getElementById('status-grid');
+        grid.innerHTML = "";
+        const answeredCount = Object.keys(studentAnswers).length;
+        document.getElementById('answered-count').innerText = answeredCount;
+        document.getElementById('total-count').innerText = students.length;
+        
+        students.forEach((s, idx) => {
+            let pill = document.createElement('div');
+            pill.className = "status-pill" + (studentAnswers.hasOwnProperty(idx) ? " ready" : "");
+            pill.innerText = s.name + (studentAnswers.hasOwnProperty(idx) ? " ✓" : " ...");
+            grid.appendChild(pill);
+        });
+    }
+
+    function revealAnswer() {
+        clearInterval(timerInterval);
+        state = "reveal";
+        let correctAns = quizData[currentQ].a;
+        let isBonus = quizData[currentQ].bonus;
+        let pointsValue = isBonus ? 2000 : 1000;
+
+        const cards = document.querySelectorAll('#options-grid .option-card');
+        cards.forEach((card, index) => {
+            if (index === correctAns) {
+                card.classList.add('correct');
+            } else {
+                card.classList.add('dimmed');
+            }
+        });
+
+        for (let idx in studentAnswers) {
+            if (studentAnswers[idx] === correctAns) {
+                students[idx].score += pointsValue;
+            }
+        }
+
+        document.getElementById('reveal-btn').classList.add('hidden');
+        document.getElementById('next-btn').classList.remove('hidden');
+    }
+
+    function goToLeaderboard() {
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('leaderboard-screen').classList.remove('hidden');
+        state = "leaderboard";
+
+        let sorted = [...students].sort((a, b) => b.score - a.score);
+        
+        const listContainer = document.getElementById('leaderboard-list');
+        listContainer.innerHTML = "";
+        
+        sorted.forEach((s, index) => {
+            let item = document.createElement('div');
+            item.className = "leaderboard-item";
+            item.innerHTML = `
+                <div>
+                    <span class="rank">#${index + 1}</span>
+                    <span>${s.name}</span>
+                </div>
+                <div class="score">${s.score} pts</div>
+            `;
+            listContainer.appendChild(item);
+        });
+
+        if (currentQ === quizData.length - 1) {
+            document.getElementById('leaderboard-title').innerText = "🏆 Final Championship Standings 🏆";
+            document.getElementById('next-q-btn').innerText = "Restart Game ↺";
+        } else {
+            document.getElementById('leaderboard-title').innerText = "Orbit Standings";
+            document.getElementById('next-q-btn').innerText = "Next Orbit ➔";
+        }
+    }
+
+    function nextQuestion() {
+        if (currentQ === quizData.length - 1) {
+            students.forEach(s => s.score = 0);
+            currentQ = 0;
+            document.getElementById('leaderboard-screen').classList.add('hidden');
+            document.getElementById('lobby-screen').classList.remove('hidden');
+            updateRoster();
+        } else {
+            currentQ++;
+            document.getElementById('leaderboard-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            loadQuestion();
+        }
+    }
+
+    function teacherHighlightOption(idx) {
+        // Placeholder for future analytics
+    }
+
+    // ==================== STUDENT FUNCTIONS ====================
+    function joinGame() {
+        const code = parseInt(document.getElementById('game-code-input').value);
+        const name = document.getElementById('student-join-name').value.trim();
+        const errorDiv = document.getElementById('join-error');
+
+        if (!code || !name) {
+            errorDiv.innerText = "Please enter both code and name";
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+
+        if (code === gameCode) {
+            currentStudentId = Math.random().toString(36).substr(2, 9);
+            currentStudentName = name;
+            errorDiv.classList.add('hidden');
+            document.getElementById('join-screen').classList.add('hidden');
+            listenToGameUpdates();
+        } else {
+            errorDiv.innerText = "Invalid game code. Check with your teacher.";
+            errorDiv.classList.remove('hidden');
+        }
+    }
+
+    function listenToGameUpdates() {
+        // Simulate listening for game updates
+        // In a real Firebase setup, this would use onValue()
+        document.getElementById('student-game-screen').classList.remove('hidden');
+        loadStudentQuestion();
+    }
+
+    function loadStudentQuestion() {
+        const qData = quizData[currentQ];
+        document.getElementById('student-question-number').innerText = `QUESTION ${currentQ + 1}/${quizData.length}`;
+        document.getElementById('student-question-text').innerText = qData.q;
+        
+        if (qData.bonus) {
+            document.getElementById('student-bonus-tag').classList.remove('hidden');
+        } else {
+            document.getElementById('student-bonus-tag').classList.add('hidden');
+        }
+
+        const cards = document.querySelectorAll('#student-options-grid .option-card');
+        cards.forEach((card, index) => {
+            card.innerText = qData.o[index];
+            card.className = `option-card opt-${index}`;
+            card.classList.remove('correct', 'dimmed', 'selected');
+        });
+
+        startStudentTimer();
+    }
+
+    function startStudentTimer() {
+        let studentTimeLeft = 20;
+        document.getElementById('student-timer').innerText = studentTimeLeft;
+        
+        let studentTimerInterval = setInterval(() => {
+            studentTimeLeft--;
+            document.getElementById('student-timer').innerText = studentTimeLeft;
+            
+            if (studentTimeLeft <= 0) {
+                clearInterval(studentTimerInterval);
+                document.getElementById('student-status-text').innerText = "Time's up! Waiting for results...";
+            }
+        }, 1000);
+    }
+
+    function studentSelectOption(idx) {
+        const cards = document.querySelectorAll('#student-options-grid .option-card');
+        cards.forEach(c => c.classList.remove('selected'));
+        cards[idx].classList.add('selected');
+        document.getElementById('student-status-text').innerText = `✓ Your answer: ${String.fromCharCode(65 + idx)}`;
+    }
+</script>
+
+</body>
+</html>
